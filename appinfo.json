@@ -1,0 +1,67 @@
+{
+  "uuid": "49341e21-3410-4f30-b1aa-7d05b1cd517d",
+  "shortName": "Contractions",
+  "longName": "Contractions",
+  "companyName": "Tan Jay Jun",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {},
+  "resources": {
+    "media": [
+      {
+        "type": "png",
+        "name": "MENU_ICON_APP",
+        "file": "menu_icon_app.png",
+        "menuIcon": true
+      },
+      {
+        "type": "png",
+        "name": "MENU_ICON_REPORT",
+        "file": "menu_icon_report.png"
+      },
+      {
+        "type": "png",
+        "name": "MENU_ICON_TRASH",
+        "file": "menu_icon_trash.png"
+      },
+      {
+        "type": "png",
+        "name": "MENU_ICON_DISCLAIMER",
+        "file": "menu_icon_disclaimer.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_PLAY",
+        "file": "action_icon_play.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_STOP",
+        "file": "action_icon_stop.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_60",
+        "file": "action_icon_60.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_30",
+        "file": "action_icon_30.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_CANCEL",
+        "file": "action_icon_cancel.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_OK",
+        "file": "action_icon_ok.png"
+      }
+    ]
+  }
+}
