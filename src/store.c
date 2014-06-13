@@ -121,6 +121,20 @@ static bool date_section_is_valid(int date_section) {
   return date_section >= 0 && date_section < MAX_NUMBER_OF_DATE_SECTIONS;
 }
 
+static void cleanup_contractions() {
+  for (int i = 0; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
+    uint32_t contraction_key = contraction_keys[i];
+    if (contraction_key != 0) {
+      Contraction contraction;
+      int status = store_contraction_for_key(contraction_key, &contraction);
+      if (status != sizeof(Contraction) || contraction.start_time == 0) {
+        // If contraction key does not retrieve usable data, remove contraction key
+        contraction_keys[i] = 0;
+      }
+    }
+  }
+}
+
 static void sort_contractions() {
   uint32_t temp;
   int j;
@@ -325,7 +339,7 @@ SummaryResult store_calculate_summary(int minutes) {
   SummaryResult result;
 
   const time_t current_time = time(NULL);
-  const int time_cutoff = current_time - 60 * minutes;
+  const time_t time_cutoff = current_time - 60 * minutes;
 
   int duration = 0;
   int interval = 0;
@@ -349,7 +363,11 @@ SummaryResult store_calculate_summary(int minutes) {
   }
 
   result.average_duration_in_seconds = duration / result.count;
-  result.average_interval_in_seconds = interval / result.count;
+  if (result.count > 1) {
+    result.average_interval_in_seconds = interval / (result.count - 1);
+  } else {
+    result.average_interval_in_seconds = interval;
+  }
 
   return result;
 }
@@ -366,6 +384,7 @@ void store_init() {
   if (persist_exists(CONTRACTIONS_KEY)) {
     int status = persist_read_data(CONTRACTIONS_KEY, contraction_keys, sizeof(contraction_keys));
     if (status == sizeof(contraction_keys)) {
+      cleanup_contractions();
       sort_contractions();
       rebuild_dates();
     }
