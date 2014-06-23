@@ -3,7 +3,6 @@
 #include "store.h"
 
 typedef enum {
-  Start,
   TimerStarted,
   TimerStopped
 } ScreenState;
@@ -14,8 +13,8 @@ static int seconds_elapsed;
 
 static GBitmap *action_icon_play;
 static GBitmap *action_icon_stop;
-static GBitmap *action_icon_ok;
-static GBitmap *action_icon_cancel;
+static GBitmap *action_icon_yes;
+static GBitmap *action_icon_no;
 
 static Window *window;
 static ActionBarLayer *action_bar_layer;
@@ -28,9 +27,12 @@ static TextLayer *timer_layer;
 static char start_text[] = "START";
 static char stop_text[] = "STOP";
 static char save_text[] = "SAVE";
-static char cancel_text[] = "CANCEL";
+static char discard_text[] = "DISCARD";
 static TextLayer *up_button_text_layer;
 static TextLayer *down_button_text_layer;
+
+static TextLayer *stop_timer_first_layer;
+static char stop_timer_first_text[] = "TO EXIT, STOP THE TIMER FIRST.";
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   if (start_time == NULL) {
@@ -46,6 +48,26 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   text_layer_set_text(timer_layer, timer_text);
 }
 
+static void show_stop_timer_alert(bool show) {
+  layer_set_hidden(text_layer_get_layer(stop_timer_first_layer), !show);
+}
+
+static void stop_timer() {
+  tick_timer_service_unsubscribe();
+  show_stop_timer_alert(false);
+  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_yes);
+  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, action_icon_no);
+  text_layer_set_text(up_button_text_layer, save_text);
+  text_layer_set_text(down_button_text_layer, discard_text);
+  screenState = TimerStopped;
+}
+
+static void back_click_handler(ClickRecognizerRef recognizer, void *context) {
+  if (screenState == TimerStarted) {
+    show_stop_timer_alert(true);
+  }
+}
+
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (screenState == TimerStopped) {
     window_stack_pop(window);
@@ -54,36 +76,28 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
   switch (screenState) {
-    case Start:
-      tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
-      action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_stop);
-      text_layer_set_text(up_button_text_layer, stop_text);
-      screenState = TimerStarted;
-      break;
-
     case TimerStarted:
-      tick_timer_service_unsubscribe();
-      action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_ok);
-      text_layer_set_text(up_button_text_layer, save_text);
-      action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, action_icon_cancel);
-      text_layer_set_text(down_button_text_layer, cancel_text);
-      screenState = TimerStopped;
+      stop_timer();
       break;
 
-    case TimerStopped: {
+    case TimerStopped:
       store_insert_contraction(time(NULL), seconds_elapsed);
       down_click_handler(recognizer, context);
-    } break;
+      break;
   }
 }
 
 static void click_config_provider(void *context) {
+  window_single_click_subscribe(BUTTON_ID_BACK, (ClickHandler)back_click_handler);
   window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler)up_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler)down_click_handler);
 }
 
-static void reset() {
-  screenState = Start;
+static void start_timer() {
+  tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+
+  // Reset
+  screenState = TimerStarted;
   start_time = NULL;
   seconds_elapsed = 0;
 
@@ -93,7 +107,9 @@ static void reset() {
   text_layer_set_text(up_button_text_layer, start_text);
   text_layer_set_text(down_button_text_layer, NULL);
 
-  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_play);
+  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_stop);
+  text_layer_set_text(up_button_text_layer, stop_text);
+
   action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_SELECT, NULL);
   action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, NULL);
 }
@@ -133,10 +149,17 @@ static void window_load(Window *window) {
   text_layer_set_font(down_button_text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(down_button_text_layer, GTextAlignmentRight);
   layer_add_child(window_layer, text_layer_get_layer(down_button_text_layer));
+
+  stop_timer_first_layer = text_layer_create(GRect(0, timer_title_y + 18 + 34, width, 18 * 2));
+  text_layer_set_font(stop_timer_first_layer, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  text_layer_set_text(stop_timer_first_layer, stop_timer_first_text);
+  text_layer_set_text_alignment(stop_timer_first_layer, GTextAlignmentCenter);
+  layer_add_child(window_layer, text_layer_get_layer(stop_timer_first_layer));
+  layer_set_hidden(text_layer_get_layer(stop_timer_first_layer), true);
 }
 
 static void window_appear(Window *window) {
-  reset();
+  start_timer();
 }
 
 static void window_disappear(Window *window) {
@@ -148,6 +171,7 @@ static void window_unload(Window *window) {
   text_layer_destroy(timer_layer);
   text_layer_destroy(up_button_text_layer);
   text_layer_destroy(down_button_text_layer);
+  text_layer_destroy(stop_timer_first_layer);
   action_bar_layer_destroy(action_bar_layer);
 }
 
@@ -158,8 +182,8 @@ void show_new_contraction() {
 void new_contraction_init() {
   action_icon_play = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_PLAY);
   action_icon_stop = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_STOP);
-  action_icon_ok = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_OK);
-  action_icon_cancel = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_CANCEL);
+  action_icon_yes = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_YES);
+  action_icon_no = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_NO);
 
   window = window_create();
 
@@ -172,5 +196,9 @@ void new_contraction_init() {
 }
 
 void new_contraction_deinit() {
+  gbitmap_destroy(action_icon_play);
+  gbitmap_destroy(action_icon_stop);
+  gbitmap_destroy(action_icon_yes);
+  gbitmap_destroy(action_icon_no);
   window_destroy(window);
 }

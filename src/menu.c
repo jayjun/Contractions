@@ -24,9 +24,9 @@ typedef enum {
   LogSectionRowCount
 } LogSectionRow;
 
-static GBitmap *report_icon;
-static GBitmap *trash_icon;
-static GBitmap *disclaimer_icon;
+static GBitmap *menu_report_icon;
+static GBitmap *menu_trash_icon;
+static GBitmap *menu_disclaimer_icon;
 
 static Window *window;
 static MenuLayer *menu_layer;
@@ -72,7 +72,7 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
     case LogSection:
       switch (cell_index->row) {
         case NewContractionRow:
-          menu_cell_basic_draw(ctx, cell_layer, "New Contraction", NULL, NULL);
+          menu_cell_basic_draw(ctx, cell_layer, "New Contraction", "Select to start timer", NULL);
           break;
 
         case PastContractionsRow: {
@@ -82,15 +82,15 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
         } break;
 
         case SummaryRow:
-          menu_cell_basic_draw(ctx, cell_layer, "Summary", NULL, report_icon);
+          menu_cell_basic_draw(ctx, cell_layer, "Summary", NULL, menu_report_icon);
           break;
 
         case ClearRow:
-          menu_cell_basic_draw(ctx, cell_layer, "Delete All", NULL, trash_icon);
+          menu_cell_basic_draw(ctx, cell_layer, "Delete All", NULL, menu_trash_icon);
           break;
 
         case HelpRow:
-          menu_cell_basic_draw(ctx, cell_layer, "Disclaimer", NULL, disclaimer_icon);
+          menu_cell_basic_draw(ctx, cell_layer, "Disclaimer", NULL, menu_disclaimer_icon);
           break;
       }
       break;
@@ -114,7 +114,7 @@ static void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, v
           break;
 
         case ClearRow:
-          show_delete_contraction(0);
+          show_delete_contraction(DELETE_ALL_CONTRACTIONS_KEY, false);
           break;
 
         case HelpRow:
@@ -130,10 +130,6 @@ static void menu_select_callback(MenuLayer *menu_layer, MenuIndex *cell_index, v
 
 // Window callbacks
 static void window_load(Window *window) {
-  report_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_REPORT);
-  trash_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_TRASH);
-  disclaimer_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_DISCLAIMER);
-
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_frame(window_layer);
 
@@ -163,6 +159,10 @@ void show_menu() {
 }
 
 void menu_init() {
+  menu_report_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_REPORT);
+  menu_trash_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_TRASH);
+  menu_disclaimer_icon = gbitmap_create_with_resource(RESOURCE_ID_MENU_ICON_DISCLAIMER);
+
   window = window_create();
 
   window_set_window_handlers(window, (WindowHandlers) {
@@ -172,5 +172,8 @@ void menu_init() {
 }
 
 void menu_deinit() {
+  gbitmap_destroy(menu_report_icon);
+  gbitmap_destroy(menu_trash_icon);
+  gbitmap_destroy(menu_disclaimer_icon);
   window_destroy(window);
 }

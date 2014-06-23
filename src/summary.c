@@ -1,9 +1,11 @@
 #include <pebble.h>
 #include "store.h"
+#include "new_contraction.h"
 
 static Window *window;
 
 static ActionBarLayer *action_bar_layer;
+static GBitmap *action_icon_play;
 static GBitmap *action_icon_60;
 static GBitmap *action_icon_30;
 
@@ -55,6 +57,10 @@ static void update_text_layer_titles() {
   text_layer_set_text(average_interval_layer, average_interval_text);
 }
 
+static void show_new_contraction_handler(ClickRecognizerRef recognizer, void *context) {
+  show_new_contraction();
+}
+
 static void show_60_mins_handler(ClickRecognizerRef recognizer, void *context) {
   text_layer_set_text(title_layer, title_1_hour_text);
   range_in_minutes = 60;
@@ -68,7 +74,8 @@ static void show_30_mins_handler(ClickRecognizerRef recognizer, void *context) {
 }
 
 static void click_config_provider(void *context) {
-  window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler)show_60_mins_handler);
+  window_single_click_subscribe(BUTTON_ID_UP, (ClickHandler)show_new_contraction_handler);
+  window_single_click_subscribe(BUTTON_ID_SELECT, (ClickHandler)show_60_mins_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, (ClickHandler)show_30_mins_handler);
 }
 
@@ -82,17 +89,14 @@ static void line_layer_draw(Layer *layer, GContext *ctx) {
 
 // Window handlers
 static void window_load(Window *window) {
-  // Action Icons
-  action_icon_60 = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_60);
-  action_icon_30 = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_30);
-
   // Action Bar
   action_bar_layer = action_bar_layer_create();
 
   action_bar_layer_add_to_window(action_bar_layer, window);
   action_bar_layer_set_click_config_provider(action_bar_layer, click_config_provider);
 
-  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_60);
+  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_UP, action_icon_play);
+  action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_SELECT, action_icon_60);
   action_bar_layer_set_icon(action_bar_layer, BUTTON_ID_DOWN, action_icon_30);
 
   // UI
@@ -162,13 +166,23 @@ static void window_load(Window *window) {
   update_text_layer_titles();
 }
 
+
+static void window_appear(Window *window) {
+  update_text_layer_titles();
+}
+
 static void window_unload(Window *window) {
+  text_layer_destroy(title_layer);
+  layer_destroy(line_layer);
+  text_layer_destroy(total_layer);
+  text_layer_destroy(total_title_layer);
+  text_layer_destroy(average_duration_layer);
+  text_layer_destroy(average_duration_title_layer);
+  text_layer_destroy(average_interval_layer);
+  text_layer_destroy(average_interval_title_layer);
+
   // Action Bar
   action_bar_layer_destroy(action_bar_layer);
-
-  // Action Icons
-  gbitmap_destroy(action_icon_60);
-  gbitmap_destroy(action_icon_30);
 }
 
 void show_summary(void) {
@@ -176,14 +190,22 @@ void show_summary(void) {
 }
 
 void summary_init(void) {
+  action_icon_play = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_PLAY);
+  action_icon_60 = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_60);
+  action_icon_30 = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_30);
+
   window = window_create();
 
   window_set_window_handlers(window, (WindowHandlers) {
     .load = window_load,
+    .appear = window_appear,
     .unload = window_unload
   });
 }
 
 void summary_deinit(void) {
+  gbitmap_destroy(action_icon_play);
+  gbitmap_destroy(action_icon_60);
+  gbitmap_destroy(action_icon_30);
   window_destroy(window);
 }

@@ -54,13 +54,28 @@
       },
       {
         "type": "png",
-        "name": "ACTION_ICON_CANCEL",
-        "file": "action_icon_cancel.png"
+        "name": "ACTION_ICON_NO",
+        "file": "action_icon_no.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_YES",
+        "file": "action_icon_yes.png"
       },
       {
         "type": "png",
         "name": "ACTION_ICON_OK",
         "file": "action_icon_ok.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_INCREMENT",
+        "file": "action_icon_increment.png"
+      },
+      {
+        "type": "png",
+        "name": "ACTION_ICON_DECREMENT",
+        "file": "action_icon_decrement.png"
       }
     ]
   }

@@ -4,18 +4,21 @@
 
 static int number_of_contractions;
 static uint32_t key;
+static bool corrupted;
 
 static GBitmap *action_icon_ok;
 static GBitmap *action_icon_cancel;
+
 static Window *window;
 static ActionBarLayer *action_bar_layer;
-
 static Layer *delete_layer;
 
 static TextLayer *warning_title_layer;
-static char warning_title_text[] = "WARNING!";
+static char warning_title_warning_text[] = "WARNING!";
+static char warning_title_corrupted_text[] = "ERROR!";
 static TextLayer *warning_layer;
 static char warning_delete_all_text[] = "Delete ALL contractions?";
+static char warning_delete_corrupted_text[] = "Data corrupted. Delete?";
 static char warning_delete_text[] = "Delete this contraction?";
 
 static TextLayer *up_button_text_layer;
@@ -76,7 +79,7 @@ static void window_load(Window *window) {
   layer_add_child(window_layer, delete_layer);
 
   warning_title_layer = text_layer_create(GRect(0, warning_title_y - 6, width, 24));
-  text_layer_set_text(warning_title_layer, warning_title_text);
+  text_layer_set_text(warning_title_layer, warning_title_warning_text);
   text_layer_set_font(warning_title_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
   text_layer_set_text_alignment(warning_title_layer, GTextAlignmentCenter);
   layer_add_child(delete_layer, text_layer_get_layer(warning_title_layer));
@@ -113,10 +116,21 @@ static void window_appear(Window *window) {
     layer_set_hidden(text_layer_get_layer(nothing_text_layer), true);
     layer_set_hidden(delete_layer, false);
     layer_set_hidden(action_bar_layer_get_layer(action_bar_layer), false);
-    if (key == 0) {
-      text_layer_set_text(warning_layer, warning_delete_all_text);
-    } else {
-      text_layer_set_text(warning_layer, warning_delete_text);
+
+    switch (key) {
+      case DELETE_ALL_CONTRACTIONS_KEY:
+        text_layer_set_text(warning_title_layer, warning_title_warning_text);
+        text_layer_set_text(warning_layer, warning_delete_all_text);
+        break;
+
+      default:
+        if (corrupted) {
+          text_layer_set_text(warning_title_layer, warning_title_corrupted_text);
+          text_layer_set_text(warning_layer, warning_delete_corrupted_text);
+        } else {
+          text_layer_set_text(warning_title_layer, warning_title_warning_text);
+          text_layer_set_text(warning_layer, warning_delete_text);
+        }
     }
   } else {
     layer_set_hidden(text_layer_get_layer(nothing_text_layer), false);
@@ -136,14 +150,13 @@ static void window_unload(Window *window) {
 }
 
 // Non-static methods
-void show_delete_contraction(int contraction_key)
-{
+void show_delete_contraction(uint32_t contraction_key, bool is_corrupted) {
   key = contraction_key;
+  corrupted = is_corrupted;
   window_stack_push(window, true);
 }
 
-void delete_contraction_init()
-{
+void delete_contraction_init() {
   action_icon_ok = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_OK);
   action_icon_cancel = gbitmap_create_with_resource(RESOURCE_ID_ACTION_ICON_CANCEL);
 
@@ -156,7 +169,8 @@ void delete_contraction_init()
   });
 }
 
-void delete_contraction_deinit()
-{
+void delete_contraction_deinit() {
+  gbitmap_destroy(action_icon_ok);
+  gbitmap_destroy(action_icon_cancel);
   window_destroy(window);
 }

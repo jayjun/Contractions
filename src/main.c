@@ -6,6 +6,7 @@
 #include "new_contraction.h"
 #include "past_contractions.h"
 #include "contraction_menu.h"
+#include "edit_contraction.h"
 #include "delete_contraction.h"
 
 static bool should_show_disclaimer = false;
@@ -19,6 +20,7 @@ static void init() {
   new_contraction_init();
   past_contractions_init();
   contraction_menu_init();
+  edit_contraction_init();
   delete_contraction_init();
 
   if (store_should_show_disclaimer()) {
@@ -40,6 +42,7 @@ static void deinit() {
   new_contraction_deinit();
   past_contractions_deinit();
   contraction_menu_deinit();
+  edit_contraction_deinit();
   delete_contraction_deinit();
 }
 

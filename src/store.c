@@ -49,7 +49,127 @@ static uint32_t generate_key_from_time(time_t start_time) {
   return atoi(key);
 }
 
-static void date_for_month_day(char *buffer, size_t size, int month, int day) {
+static DateRange make_date_range(int location, int month, int day) {
+  DateRange range;
+  range.location = location;
+  range.length = 1;
+  range.month = month;
+  range.day = day;
+
+  store_date_for_month_day(range.as_string, sizeof(range.as_string), month, day);
+
+  return range;
+}
+
+static bool date_section_is_valid(int date_section) {
+  return date_section >= 0 && date_section < MAX_NUMBER_OF_DATE_SECTIONS;
+}
+
+static void cleanup_contractions() {
+  for (int i = 0; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
+    uint32_t contraction_key = contraction_keys[i];
+    if (contraction_key != 0) {
+      Contraction contraction;
+      status_t status = store_contraction_for_key(contraction_key, &contraction);
+      if (status != sizeof(Contraction) || contraction.start_time == 0) {
+        // If contraction key does not retrieve usable data, remove contraction key
+        contraction_keys[i] = 0;
+      }
+    }
+  }
+}
+
+static void sort_contractions() {
+  uint32_t temp;
+  int j;
+
+  // Insert sort
+  for (int i = 1; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
+    temp = contraction_keys[i];
+    j = i - 1;
+    while (temp > contraction_keys[j] && j >= 0) {
+      contraction_keys[j + 1] = contraction_keys[j];
+      j--;
+    }
+    contraction_keys[j + 1] = temp;
+  }
+
+  number_of_contractions = 0;
+  for (int i = 0; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
+    if (contraction_keys[i] != 0) {
+      number_of_contractions++;
+    }
+  }
+}
+
+static void rebuild_dates() {
+  number_of_dates = 0;
+  memset(dates, 0, sizeof(dates));
+
+  for (int i = 0; i < number_of_contractions; i++) {
+    uint32_t contraction_key = contraction_keys[i];
+
+    Contraction contraction;
+    status_t status = store_contraction_for_key(contraction_key, &contraction);
+
+    if (status == sizeof(Contraction)) {
+      time_t start_time = contraction.start_time;
+      struct tm *date_time = localtime(&start_time);
+
+      int month = date_time->tm_mon;
+      int day = date_time->tm_mday;
+
+      DateRange range;
+      if (number_of_dates > 0) {
+        range = dates[number_of_dates - 1];
+        if (range.month == month && range.day == day) {
+          range.length++;
+          dates[number_of_dates - 1] = range;
+        } else if (number_of_dates < MAX_NUMBER_OF_DATE_SECTIONS) {
+          range = make_date_range(i, month, day);
+          dates[number_of_dates] = range;
+          number_of_dates++;
+        }
+      } else {
+        range = make_date_range(i, month, day);
+        dates[0] = range;
+        number_of_dates++;
+      }
+    }
+  }
+  // log_dates();
+}
+
+// Non-static functions
+void store_time_for_hour_minute(char *buffer, size_t size, int hour, int minute) {
+  if (clock_is_24h_style()) {
+    snprintf(buffer, size, "%2d:%02d", hour, minute);
+  } else {
+    if (hour > 12) {
+      snprintf(buffer, size, "%2d:%02d PM", hour % 12, minute);
+    } else if (hour == 0) {
+      snprintf(buffer, size, "12:%02d AM", minute);
+    } else {
+      snprintf(buffer, size, "%2d:%02d AM", hour, minute);
+    }
+  }
+}
+
+void store_time_for_time(char *buffer, size_t size, int hour, int minute, int second) {
+  if (clock_is_24h_style()) {
+    snprintf(buffer, size, "%2d:%02d:%02d", hour, minute, second);
+  } else {
+    if (hour > 12) {
+      snprintf(buffer, size, "%2d:%02d:%02d PM", hour % 12, minute, second);
+    } else if (hour == 0) {
+      snprintf(buffer, size, "12:%02d:%02d AM", minute, second);
+    } else {
+      snprintf(buffer, size, "%2d:%02d:%02d AM", hour, minute, second);
+    }
+  }
+}
+
+void store_date_for_month_day(char *buffer, size_t size, int month, int day) {
   char month_name[4];
   
   switch (month) {
@@ -105,126 +225,51 @@ static void date_for_month_day(char *buffer, size_t size, int month, int day) {
   snprintf(buffer, size, "%s %d", month_name, day);
 }
 
-static DateRange make_date_range(int location, int month, int day) {
-  DateRange range;
-  range.location = location;
-  range.length = 1;
-  range.month = month;
-  range.day = day;
-
-  date_for_month_day(range.as_string, sizeof(range.as_string), month, day);
-
-  return range;
-}
-
-static bool date_section_is_valid(int date_section) {
-  return date_section >= 0 && date_section < MAX_NUMBER_OF_DATE_SECTIONS;
-}
-
-static void cleanup_contractions() {
-  for (int i = 0; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
-    uint32_t contraction_key = contraction_keys[i];
-    if (contraction_key != 0) {
-      Contraction contraction;
-      int status = store_contraction_for_key(contraction_key, &contraction);
-      if (status != sizeof(Contraction) || contraction.start_time == 0) {
-        // If contraction key does not retrieve usable data, remove contraction key
-        contraction_keys[i] = 0;
-      }
-    }
-  }
-}
-
-static void sort_contractions() {
-  uint32_t temp;
-  int j;
-
-  // Insert sort
-  for (int i = 1; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
-    temp = contraction_keys[i];
-    j = i - 1;
-    while (temp > contraction_keys[j] && j >= 0) {
-      contraction_keys[j + 1] = contraction_keys[j];
-      j--;
-    }
-    contraction_keys[j + 1] = temp;
-  }
-
-  number_of_contractions = 0;
-  for (int i = 0; i < MAX_NUMBER_OF_CONTRACTIONS; i++) {
-    if (contraction_keys[i] != 0) {
-      number_of_contractions++;
-    }
-  }
-}
-
-static void rebuild_dates() {
-  number_of_dates = 0;
-  memset(dates, 0, sizeof(dates));
-
-  for (int i = 0; i < number_of_contractions; i++) {
-    uint32_t contraction_key = contraction_keys[i];
-
-    Contraction contraction;
-    int status = store_contraction_for_key(contraction_key, &contraction);
-
-    if (status == sizeof(Contraction)) {
-      time_t start_time = contraction.start_time;
-      struct tm *date_time = localtime(&start_time);
-
-      int month = date_time->tm_mon;
-      int day = date_time->tm_mday;
-
-      DateRange range;
-      if (number_of_dates > 0) {
-        range = dates[number_of_dates - 1];
-        if (range.month == month && range.day == day) {
-          range.length++;
-          dates[number_of_dates - 1] = range;
-        } else if (number_of_dates < MAX_NUMBER_OF_DATE_SECTIONS) {
-          range = make_date_range(i, month, day);
-          dates[number_of_dates] = range;
-          number_of_dates++;
-        }
-      } else {
-        range = make_date_range(i, month, day);
-        dates[0] = range;
-        number_of_dates++;
-      }
-    }
-  }
-  // log_dates();
-}
-
-// Non-static functions
-void store_time_for_hour_minute(char *buffer, size_t size, int hour, int minute) {
-  if (clock_is_24h_style()) {
-    snprintf(buffer, size, "%2d:%02d", hour, minute);
-  } else {
-    if (hour > 12) {
-      snprintf(buffer, size, "%2d:%02d PM", hour % 12, minute);
-    } else if (hour == 0) {
-      snprintf(buffer, size, "12:%02d AM", minute);
-    } else {
-      snprintf(buffer, size, "%2d:%02d AM", hour, minute);
-    }
-  }
-}
-
-void store_date_time_for_contraction(char *buffer, size_t size, int contraction_key) {
+void store_time_text_for_contraction(char *start_time_buffer, size_t start_time_size, char *end_time_buffer, size_t end_time_size, int contraction_key) {
   Contraction contraction;
-  int status = store_contraction_for_key(contraction_key, &contraction);
+  status_t status = store_contraction_for_key(contraction_key, &contraction);
 
   if (status == sizeof(Contraction)) {
     struct tm *start_datetime = localtime(&contraction.start_time);
+    store_time_for_time(start_time_buffer, start_time_size, start_datetime->tm_hour, start_datetime->tm_min, start_datetime->tm_sec);
 
-    char atime[] = "00:00 AM";
-    char date[] = "Jan 01";
+    contraction.start_time += contraction.seconds_elapsed;
 
-    store_time_for_hour_minute(atime, sizeof(atime), start_datetime->tm_hour, start_datetime->tm_min);
-    date_for_month_day(date, sizeof(date), start_datetime->tm_mon, start_datetime->tm_mday);
+    struct tm *end_datetime = localtime(&contraction.start_time);
+    store_time_for_time(end_time_buffer, end_time_size, end_datetime->tm_hour, end_datetime->tm_min, end_datetime->tm_sec);
+  }
+}
 
-    snprintf(buffer, size, "%s , %s", date, atime);
+void store_duration_for_seconds_elapsed(char *buffer, size_t size, int seconds_elapsed) {
+  char prefix_text[] = "Lasted ";
+  char minute_text[] = "min";
+  char second_text[] = "sec";
+  char plural_suffix[] = "s";
+
+  int minutes = seconds_elapsed / 60;
+  int seconds = seconds_elapsed % 60;
+
+  if (seconds_elapsed > 60) {
+    snprintf(
+      buffer,
+      size,
+      "%s%d %s%s %d%s%s",
+      prefix_text,
+      minutes,
+      minute_text,
+      minutes == 1 ? "" : plural_suffix,
+      seconds,
+      second_text,
+      seconds == 1 ? "" : plural_suffix);
+  } else {
+    snprintf(
+      buffer,
+      size,
+      "%s%d %s%s",
+      prefix_text,
+      seconds_elapsed,
+      second_text,
+      seconds == 1 ? "" : plural_suffix);
   }
 }
 
@@ -238,8 +283,18 @@ int store_number_of_date_sections() {
 
 void store_date_for_date_section(char *date_as_string, size_t num, int date_section) {
   if (date_as_string != NULL && num > 0 && date_section_is_valid(date_section)) {
+    char date_text[] = "Jan 01";
     DateRange range = dates[date_section];
-    strcpy(date_as_string, range.as_string);
+    strcpy(date_text, range.as_string);
+
+    time_t current_time = time(NULL);
+    struct tm *now = localtime(&current_time);
+
+    if (range.month == now->tm_mon && range.day == now->tm_mday) {
+      snprintf(date_as_string, num, "Today, %s", date_text);
+    } else {
+      snprintf(date_as_string, num, "%s", date_text);
+    }
   }
 }
 
@@ -274,13 +329,44 @@ status_t store_contraction_for_key(uint32_t contraction_key, Contraction *contra
   return persist_read_data(contraction_key, contraction, sizeof(Contraction));
 }
 
-void store_insert_contraction(time_t start_time, int seconds_elapsed) {
+status_t store_contractions_for_key(
+  uint32_t contraction_key,
+  Contraction *contraction,
+  Contraction *previous_contraction,
+  Contraction *next_contraction) {
+
+  sort_contractions();
+  previous_contraction->start_time = 0;
+  next_contraction->start_time = 0;
+
+  for (int i = 0; i < number_of_contractions; i++) {
+    uint32_t key = contraction_keys[i];
+
+    if (key == contraction_key) {
+      if (i > 0) {
+        uint32_t next_contraction_key = contraction_keys[i - 1];
+        store_contraction_for_key(next_contraction_key, next_contraction);
+      }
+
+      if (i < (number_of_contractions - 1)) {
+        uint32_t previous_contraction_key = contraction_keys[i + 1];
+        store_contraction_for_key(previous_contraction_key, previous_contraction);
+      }
+
+      break;
+    }
+  }
+
+  return store_contraction_for_key(contraction_key, contraction);
+}
+
+uint32_t store_insert_contraction(time_t start_time, int seconds_elapsed) {
   Contraction contraction;
   contraction.start_time = start_time;
   contraction.seconds_elapsed = seconds_elapsed;
 
   uint32_t contraction_key = generate_key_from_time(start_time);
-  int status = persist_write_data(contraction_key, &contraction, sizeof(Contraction));
+  status_t status = persist_write_data(contraction_key, &contraction, sizeof(Contraction));
 
   if (status == sizeof(Contraction)) {
     bool found = false;
@@ -303,6 +389,13 @@ void store_insert_contraction(time_t start_time, int seconds_elapsed) {
     sort_contractions();
     rebuild_dates();
   }
+
+  return contraction_key;
+}
+
+uint32_t store_replace_contraction(uint32_t old_contraction_key, time_t new_start_time, int seconds_elapsed) {
+  store_remove_contraction(old_contraction_key);
+  return store_insert_contraction(new_start_time, seconds_elapsed);
 }
 
 void store_remove_contraction(time_t start_time) {
@@ -382,7 +475,7 @@ void store_set_disclaimer_shown(bool shown) {
 
 void store_init() {
   if (persist_exists(CONTRACTIONS_KEY)) {
-    int status = persist_read_data(CONTRACTIONS_KEY, contraction_keys, sizeof(contraction_keys));
+    status_t status = persist_read_data(CONTRACTIONS_KEY, contraction_keys, sizeof(contraction_keys));
     if (status == sizeof(contraction_keys)) {
       cleanup_contractions();
       sort_contractions();

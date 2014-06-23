@@ -6,11 +6,8 @@
 static char disclaimer_title_text[] = "DISCLAIMER";
 static char disclaimer_text[] =
     "By proceeding, I acknowledge that this app DOES NOT provide medical advice.\n\n"
-    "Please consult your physician or obstetrician for proper guidance at all times.\n\n"
+    "Please consult your obstetrician or midwife for proper guidance at all times.\n\n"
     "USE AT YOUR\nOWN RISK!";
-
-static GBitmap *action_icon_ok;
-static GBitmap *action_icon_cancel;
 
 static Window *window;
 static TextLayer *disclaimer_title_layer;

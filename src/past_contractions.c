@@ -23,10 +23,9 @@ static int16_t menu_get_header_height_callback(MenuLayer *menu_layer, uint16_t s
 }
 
 static void menu_draw_header_callback(GContext* ctx, const Layer *cell_layer, uint16_t section_index, void *data) {
-  char date[] = "Jan 01";
-  store_date_for_date_section(date, sizeof(date), section_index);
-
-  menu_cell_basic_header_draw(ctx, cell_layer, date);
+  char header_text[32];
+  store_date_for_date_section(header_text, sizeof(header_text), section_index);
+  menu_cell_basic_header_draw(ctx, cell_layer, header_text);
 }
 
 static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data) {
@@ -44,37 +43,7 @@ static void menu_draw_row_callback(GContext* ctx, const Layer *cell_layer, MenuI
     int minute = start_datetime->tm_min;
 
     store_time_for_hour_minute(title_text, sizeof(title_text), hour, minute);
-
-    char lasted_text[] = "Lasted";
-    char minute_text[] = "min";
-    char second_text[] = "sec";
-    char plural_suffix[] = "s";
-
-    int minutes = seconds_elapsed / 60;
-    int seconds = seconds_elapsed % 60;
-
-    if (seconds_elapsed > 60) {
-      snprintf(
-        subtitle_text,
-        sizeof(subtitle_text),
-        "%s %d %s%s %d %s%s",
-        lasted_text,
-        minutes,
-        minute_text,
-        minutes == 1 ? "" : plural_suffix,
-        seconds,
-        second_text,
-        seconds == 1 ? "" : plural_suffix);
-    } else {
-      snprintf(
-        subtitle_text,
-        sizeof(subtitle_text),
-        "%s %d %s%s",
-        lasted_text,
-        seconds_elapsed,
-        second_text,
-        seconds == 1 ? "" : plural_suffix);
-    }
+    store_duration_for_seconds_elapsed(subtitle_text, sizeof(subtitle_text), seconds_elapsed);
   }
 
   menu_cell_basic_draw(ctx, cell_layer, title_text, subtitle_text, NULL);
