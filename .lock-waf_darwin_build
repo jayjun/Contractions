@@ -1,8 +1,0 @@
-argv = ['/Users/jayjun/Code/Pebble/PebbleSDK-2.0.2/Pebble/waf', 'configure', 'build']
-environ = {'TERM_SESSION_ID': '02FD1011-C416-475C-8E08-84863D82A899', 'XPC_SERVICE_NAME': '0', 'PYTHONPATH': '/Users/jayjun/Code/Pebble/PebbleSDK-current/bin/../.env/lib/python2.7/site-packages', 'VERSIONER_PYTHON_PREFER_32_BIT': 'no', 'TERM_PROGRAM_VERSION': '335', 'SSH_AUTH_SOCK': '/private/tmp/com.apple.launchd.1oDzhsyfUt/Listeners', 'SHELL': '/bin/bash', 'LOGNAME': 'jayjun', 'USER': 'jayjun', 'HOME': '/Users/jayjun', 'PATH': '/Users/jayjun/Code/Pebble/PebbleSDK-2.0.2/arm-cs-tools/bin:/Users/jayjun/Code/Pebble/PebbleSDK-current/bin:/usr/local/share/gradle-1.6/bin:/Users/jayjun/Android/tools:/Users/jayjun/Android/platform-tools:/usr/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin', 'TMPDIR': '/var/folders/24/cybwl06x2s3cxvx_hq1cx1ym0000gn/T/', 'TERM_PROGRAM': 'Apple_Terminal', 'LANG': 'en_AU.UTF-8', 'TERM': 'xterm-256color', 'Apple_PubSub_Socket_Render': '/private/tmp/com.apple.launchd.HMCLbssldB/Render', 'VERSIONER_PYTHON_VERSION': '2.7', 'SHLVL': '2', 'XPC_FLAGS': '0x0', '__CF_USER_TEXT_ENCODING': '0x1F5:0x0:0x0', 'PWD': '/Users/jayjun/Code/Pebble/Contractions', '_': '/Users/jayjun/Code/Pebble/PebbleSDK-2.0.2/Pebble/waf'}
-files = ['/Users/jayjun/Code/Pebble/Contractions/wscript']
-hash = 4672844372416070989
-options = {'files': '', 'jobs': 8, 'verbose': 0, 'nocache': False, 'progress_bar': 0, 'timestamp': None, 'distcheck_args': None, 'top': '', 'destdir': '', 'keep': 0, 'zones': '', 'debug': False, 'prefix': '/usr/local/', 'download': False, 'force': False, 'targets': '', 'out': ''}
-out_dir = '/Users/jayjun/Code/Pebble/Contractions/build'
-run_dir = '/Users/jayjun/Code/Pebble/Contractions'
-top_dir = '/Users/jayjun/Code/Pebble/Contractions'
